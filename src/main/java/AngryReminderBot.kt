@@ -2,6 +2,7 @@ import models.BotCommand
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
+import java.util.concurrent.Future
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -13,7 +14,9 @@ private const val PERIOD: Long = 2
 
 class AngryReminderBot(
         private val executor: ScheduledExecutorService
-): TelegramLongPollingBot() {
+) : TelegramLongPollingBot() {
+
+    private var future: Future<*>? = null
 
     private val runnable = Runnable {
         sendMessage()
@@ -29,8 +32,12 @@ class AngryReminderBot(
         chatId = update.message.chatId
 
         when (update.message.text.toString()) {
-            BotCommand.Start.command -> executor.scheduleAtFixedRate(runnable, INITIAL_DELAY, PERIOD, TimeUnit.SECONDS)
-            BotCommand.Stop.command -> executor.shutdown()
+            BotCommand.Start.command -> {
+                future = executor.scheduleAtFixedRate(runnable, INITIAL_DELAY, PERIOD, TimeUnit.SECONDS)
+            }
+            BotCommand.Stop.command -> {
+                future?.cancel(true)
+            }
         }
     }
 
